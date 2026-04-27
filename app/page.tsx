@@ -27,6 +27,9 @@ export default function Home() {
     )
   }
 
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* 사이드바 */}
@@ -42,8 +45,8 @@ export default function Home() {
       {/* 메인 영역 */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* 상단 헤더 */}
-        <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="bg-white border-b border-gray-100 px-4 md:px-6 py-3 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-2 md:gap-3">
             <button
               onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
               className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors"
@@ -56,28 +59,28 @@ export default function Home() {
             >
               ›
             </button>
-            <h1 className="text-base font-semibold text-gray-900">
+            <h1 className="text-sm md:text-base font-semibold text-gray-900">
               {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
             </h1>
             <button
               onClick={() => setCurrentDate(new Date())}
-              className="text-xs text-gray-500 border border-gray-200 px-2.5 py-1 rounded-lg hover:bg-gray-50 transition-colors"
+              className="text-xs text-gray-500 border border-gray-200 px-2 py-1 rounded-lg hover:bg-gray-50 transition-colors"
             >
               오늘
             </button>
           </div>
 
-          {/* 뷰 전환 */}
+          {/* 뷰 전환 — 모바일에서는 캘린더 뷰일 때만 표시 */}
           {currentView !== 'todo' && (
             <div className="flex bg-gray-100 rounded-lg p-1 gap-0.5">
               {(['month', 'week', 'day'] as View[]).map((v) => (
                 <button
                   key={v}
                   onClick={() => setCurrentView(v)}
-                  className={`px-3 py-1 rounded-md text-xs transition-all ${
+                  className={`px-2 md:px-3 py-1 rounded-md text-xs transition-all ${
                     currentView === v
                       ? 'bg-white text-gray-900 shadow-sm font-medium'
-                      : 'text-gray-700 hover:text-gray-900'
+                      : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
                   {v === 'month' ? '월' : v === 'week' ? '주' : '일'}
@@ -88,7 +91,7 @@ export default function Home() {
         </header>
 
         {/* 뷰 영역 */}
-        <main className="flex-1 p-4 overflow-hidden relative">
+        <main className="flex-1 p-2 md:p-4 overflow-hidden relative pb-20 md:pb-4">
           <div className="h-full">
             {currentView === 'month' && (
               <MonthView
@@ -125,7 +128,7 @@ export default function Home() {
           {/* FAB 버튼 */}
           <button
             onClick={() => setShowFAB(true)}
-            className="fixed bottom-16 right-16 w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all hover:scale-105 flex items-center justify-center text-2xl z-40"
+            className="fixed bottom-20 md:bottom-16 right-6 md:right-16 w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all hover:scale-105 flex items-center justify-center text-2xl z-40"
           >
             +
           </button>
@@ -140,7 +143,7 @@ export default function Home() {
       {showFAB && (
         <FABModal
           selectedDate={currentDate}
-          initialDate={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}
+          initialDate={todayStr}
           onClose={() => setShowFAB(false)}
           onSaved={() => setRefreshKey((k) => k + 1)}
         />
