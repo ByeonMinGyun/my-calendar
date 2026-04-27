@@ -215,11 +215,12 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
+      {/* 요일 헤더 */}
       <div className="grid grid-cols-7 border-b border-gray-100">
         {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
           <div
             key={d}
-            className={`text-center text-sm py-3 font-medium ${
+            className={`text-center text-xs md:text-sm py-2 md:py-3 font-medium ${
               i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-600'
             }`}
           >
@@ -228,9 +229,10 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
         ))}
       </div>
 
+      {/* 날짜 그리드 */}
       <div className="grid grid-cols-7 flex-1 select-none">
         {blanks.map((i) => (
-          <div key={`blank-${i}`} className="border-b border-r border-gray-50 min-h-28" />
+          <div key={`blank-${i}`} className="border-b border-r border-gray-50 min-h-16 md:min-h-28" />
         ))}
         {days.map((day, idx) => {
           const singleEvents = getSingleEventsForDay(day)
@@ -249,12 +251,14 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
               onMouseUp={(e) => handleMouseUp(e, day)}
               onDragOver={(e) => handleDragOver(e, day)}
               onDrop={(e) => handleDrop(e, day)}
-              className={`min-h-28 p-1.5 border-b border-r border-gray-50 cursor-pointer transition-colors ${
+              onClick={() => setSelectedDate(new Date(year, month, day))}
+              className={`min-h-16 md:min-h-28 p-1 md:p-1.5 border-b border-r border-gray-50 cursor-pointer transition-colors ${
                 inRange ? 'bg-blue-50' : isDragOver ? 'bg-blue-50' : 'hover:bg-gray-50'
               }`}
             >
+              {/* 날짜 숫자 */}
               <div
-                className={`text-sm w-7 h-7 flex items-center justify-center rounded-full mb-1 font-medium ${
+                className={`text-xs md:text-sm w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full mb-0.5 font-medium ${
                   isToday(day)
                     ? 'bg-blue-500 text-white'
                     : col === 0
@@ -282,7 +286,7 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
                     key={e.id}
                     onMouseDown={(evt) => evt.stopPropagation()}
                     onClick={(evt) => { evt.stopPropagation(); setSelectedEvent(e) }}
-                    className="h-6 mb-0.5 flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+                    className="h-5 mb-0.5 flex items-center cursor-pointer hover:opacity-80 transition-opacity"
                     style={{
                       backgroundColor: '#ffffff',
                       borderTop: borderStyle,
@@ -296,7 +300,7 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
                   >
                     {isStart && (
                       <span
-                        className="text-sm font-medium truncate px-1.5"
+                        className="text-xs font-medium truncate px-1"
                         style={{ color: e.color }}
                       >
                         {e.title}
@@ -323,7 +327,7 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
                     className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                     style={{ backgroundColor: e.color }}
                   />
-                  <span className="text-sm text-gray-700 truncate">{e.title}</span>
+                  <span className="text-xs md:text-sm text-gray-700 truncate">{e.title}</span>
                 </div>
               ))}
 
@@ -353,7 +357,7 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
                   </div>
                   <span
                     onClick={(evt) => { evt.stopPropagation(); setSelectedTodo(t) }}
-                    className={`text-sm truncate cursor-pointer ${
+                    className={`text-xs md:text-sm truncate cursor-pointer ${
                       t.is_done ? 'line-through text-gray-300' : 'text-gray-700 hover:text-blue-500'
                     }`}
                   >

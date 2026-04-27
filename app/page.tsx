@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Sidebar from './components/Sidebar'
 import MonthView from './components/MonthView'
 import WeekView from './components/WeekView'
@@ -21,6 +21,8 @@ export default function Home() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [refreshKey, setRefreshKey] = useState(0)
 
+  const touchStartX = useRef<number | null>(null)
+
   const toggleCategory = (id: string) => {
     setSelectedCategories((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
@@ -30,9 +32,25 @@ export default function Home() {
   const today = new Date()
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return
+    const diff = touchStartX.current - e.changedTouches[0].clientX
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
+      } else {
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
+      }
+    }
+    touchStartX.current = null
+  }
+
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* 사이드바 */}
       <Sidebar
         selectedCategories={selectedCategories}
         onToggleCategory={toggleCategory}
@@ -42,10 +60,9 @@ export default function Home() {
         onChangeView={setCurrentView}
       />
 
-      {/* 메인 영역 */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* 상단 헤더 */}
-        <header className="bg-white border-b border-gray-100 px-4 md:px-6 py-3 flex items-center justify-between flex-shrink-0">
+        <header className="bg-white border-b border-gray-100 px-4 md:px-6 py-2 md:py-3 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2 md:gap-3">
             <button
               onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
@@ -70,7 +87,6 @@ export default function Home() {
             </button>
           </div>
 
-          {/* 뷰 전환 — 모바일에서는 캘린더 뷰일 때만 표시 */}
           {currentView !== 'todo' && (
             <div className="flex bg-gray-100 rounded-lg p-1 gap-0.5">
               {(['month', 'week', 'day'] as View[]).map((v) => (
@@ -91,7 +107,11 @@ export default function Home() {
         </header>
 
         {/* 뷰 영역 */}
-        <main className="flex-1 p-2 md:p-4 overflow-hidden relative pb-20 md:pb-4">
+        <main
+          className="flex-1 p-2 md:p-4 overflow-hidden relative pb-16 md:pb-4"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className="h-full">
             {currentView === 'month' && (
               <MonthView
@@ -128,14 +148,13 @@ export default function Home() {
           {/* FAB 버튼 */}
           <button
             onClick={() => setShowFAB(true)}
-            className="fixed bottom-20 md:bottom-16 right-6 md:right-16 w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all hover:scale-105 flex items-center justify-center text-2xl z-40"
+            className="fixed bottom-20 md:bottom-16 right-6 md:right-16 w-12 h-12 md:w-14 md:h-14 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all hover:scale-105 flex items-center justify-center text-2xl z-40"
           >
             +
           </button>
         </main>
       </div>
 
-      {/* 모달들 */}
       {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
       {showCategoryManager && (
         <CategoryManager onClose={() => setShowCategoryManager(false)} />
