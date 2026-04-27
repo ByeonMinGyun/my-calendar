@@ -77,7 +77,7 @@ export default function Home() {
               ›
             </button>
             <h1 className="text-sm md:text-base font-semibold text-gray-900">
-              {currentDate.getFullYear()}년 {currentDate.getFullYear()}년 {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
+              {currentDate.getMonth() + 1}월
             </h1>
             <button
               onClick={() => setCurrentDate(new Date())}
