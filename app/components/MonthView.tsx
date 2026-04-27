@@ -230,7 +230,7 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
       </div>
 
       {/* 날짜 그리드 */}
-      <div className="grid grid-cols-7 flex-1 select-none">
+      <div className="grid grid-cols-7 flex-1 select-none calendar-grid">
         {blanks.map((i) => (
           <div key={`blank-${i}`} className="border-b border-r border-gray-50 min-h-16 md:min-h-28" />
         ))}
@@ -323,11 +323,12 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
                     draggingEvent?.id === e.id ? 'opacity-40' : ''
                   }`}
                 >
-                  <div
-                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: e.color }}
-                  />
-                  <span className="text-xs md:text-sm text-gray-700 truncate">{e.title}</span>
+                 <span
+                    className="text-xs truncate font-medium"
+                    style={{ color: e.color }}
+                  >
+                    {e.title}
+                  </span>
                 </div>
               ))}
 
