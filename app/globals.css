@@ -1,3 +1,9 @@
+@font-face {
+  font-family: 'GangwonEduAll';
+  src: url('/fonts/GangwonEduAll.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
 @import "tailwindcss";
 
 :root {

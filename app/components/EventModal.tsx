@@ -14,20 +14,16 @@ interface Props {
 export default function EventModal({ selectedDate, onClose, onSaved, existingEvent }: Props) {
   const [title, setTitle] = useState(existingEvent?.title || '')
   const [description, setDescription] = useState(existingEvent?.description || '')
-  const [startTime, setStartTime] = useState(
-    existingEvent ? new Date(existingEvent.start_at).toTimeString().slice(0, 5) : '09:00'
+  const [eventDate, setEventDate] = useState(
+    existingEvent
+      ? (() => {
+          const d = new Date(existingEvent.start_at)
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        })()
+      : `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
   )
-  const [endTime, setEndTime] = useState(
-    existingEvent ? new Date(existingEvent.end_at).toTimeString().slice(0, 5) : '10:00'
-  )
-  const [color, setColor] = useState(existingEvent?.color || '#3b82f6')
   const [categoryId, setCategoryId] = useState(existingEvent?.category_id || '')
   const [categories, setCategories] = useState<Category[]>([])
-
-  const colors = [
-    '#3b82f6', '#ef4444', '#10b981',
-    '#f59e0b', '#8b5cf6', '#ec4899',
-  ]
 
   useEffect(() => {
     fetchCategories()
@@ -38,16 +34,19 @@ export default function EventModal({ selectedDate, onClose, onSaved, existingEve
     if (data) setCategories(data)
   }
 
-  const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+  const getCategoryColor = (id: string) => {
+    const cat = categories.find((c) => c.id === id)
+    return cat?.color || '#3b82f6'
+  }
 
   const handleSave = async () => {
     if (!title.trim()) return
     const payload = {
       title: title.trim(),
       description: description.trim(),
-      start_at: `${dateStr}T${startTime}:00`,
-      end_at: `${dateStr}T${endTime}:00`,
-      color,
+      start_at: `${eventDate}T00:00:00`,
+      end_at: `${eventDate}T23:59:00`,
+      color: getCategoryColor(categoryId),
       category_id: categoryId || null,
     }
     if (existingEvent) {
@@ -93,33 +92,27 @@ export default function EventModal({ selectedDate, onClose, onSaved, existingEve
             autoFocus
             className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-300 transition-colors"
           />
-          <input
-            type="text"
+          <textarea
             placeholder="메모 (선택)"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-300 transition-colors"
+            rows={4}
+            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-300 transition-colors resize-none"
           />
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className="text-xs text-gray-400 mb-1 block">시작</label>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-300"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="text-xs text-gray-400 mb-1 block">종료</label>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-300"
-              />
-            </div>
+
+          {/* 날짜 선택 */}
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">날짜</label>
+            <input
+              type="date"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-300 cursor-pointer"
+              onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
+            />
           </div>
+
+          {/* 카테고리 선택 */}
 
           {/* 카테고리 선택 */}
           <select
@@ -127,27 +120,11 @@ export default function EventModal({ selectedDate, onClose, onSaved, existingEve
             onChange={(e) => setCategoryId(e.target.value)}
             className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-300 transition-colors text-gray-500"
           >
-            <option value="">카테고리 선택 (선택)</option>
+            <option value="">카테고리 선택</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
           </select>
-
-          {/* 색상 선택 */}
-          <div className="flex gap-2 pt-1">
-            {colors.map((c) => (
-              <button
-                key={c}
-                onClick={() => setColor(c)}
-                className="w-7 h-7 rounded-full transition-transform hover:scale-110"
-                style={{
-                  backgroundColor: c,
-                  outline: color === c ? `2px solid ${c}` : 'none',
-                  outlineOffset: '2px',
-                }}
-              />
-            ))}
-          </div>
 
           <button
             onClick={handleSave}

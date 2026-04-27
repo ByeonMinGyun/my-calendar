@@ -4,11 +4,15 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { Category } from '../lib/types'
 
+type View = 'month' | 'week' | 'day' | 'todo'
+
 interface Props {
   selectedCategories: string[]
   onToggleCategory: (id: string) => void
   onOpenSearch: () => void
   onOpenCategoryManager: () => void
+  currentView: View
+  onChangeView: (view: View) => void
 }
 
 export default function Sidebar({
@@ -16,6 +20,8 @@ export default function Sidebar({
   onToggleCategory,
   onOpenSearch,
   onOpenCategoryManager,
+  currentView,
+  onChangeView,
 }: Props) {
   const [categories, setCategories] = useState<Category[]>([])
 
@@ -43,7 +49,22 @@ export default function Sidebar({
         <span className="font-semibold text-gray-900">캘린더</span>
       </div>
 
-      {/* 메뉴 */}
+      {/* 캘린더 메뉴 */}
+      <button
+        onClick={() => onChangeView('month')}
+        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+          ['month', 'week', 'day'].includes(currentView)
+            ? 'bg-blue-50 text-blue-500 font-medium'
+            : 'text-gray-600 hover:bg-gray-50'
+        }`}
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        캘린더
+      </button>
+
+      {/* 검색 */}
       <button
         onClick={onOpenSearch}
         className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors"
@@ -54,6 +75,22 @@ export default function Sidebar({
         검색
       </button>
 
+      {/* 할 일 */}
+      <button
+        onClick={() => onChangeView('todo')}
+        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+          currentView === 'todo'
+            ? 'bg-blue-50 text-blue-500 font-medium'
+            : 'text-gray-600 hover:bg-gray-50'
+        }`}
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        </svg>
+        할 일
+      </button>
+
+      {/* 카테고리 */}
       <button
         onClick={onOpenCategoryManager}
         className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors"
@@ -66,7 +103,7 @@ export default function Sidebar({
 
       {/* 카테고리 목록 */}
       <div className="mt-4">
-        <div className="flex items-center justify-between px-3 mb-2">
+        <div className="px-3 mb-2">
           <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">카테고리</span>
         </div>
         {categories.map((cat) => (
@@ -76,13 +113,13 @@ export default function Sidebar({
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-gray-50"
           >
             <div
-              className="w-3 h-3 rounded-sm flex-shrink-0"
+              className="w-3 h-3 rounded-sm flex-shrink-0 transition-colors"
               style={{
                 backgroundColor: selectedCategories.includes(cat.id) ? cat.color : 'transparent',
                 border: `2px solid ${cat.color}`,
               }}
             />
-            <span className={selectedCategories.includes(cat.id) ? 'text-gray-900' : 'text-gray-400'}>
+            <span className="text-gray-900">
               {cat.name}
             </span>
           </button>

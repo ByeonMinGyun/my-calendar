@@ -13,7 +13,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className="bg-gray-50 text-gray-900 antialiased">
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
+        />
+      </head>
+      <body
+        className="bg-gray-50 text-gray-900 antialiased"
+        style={{ fontFamily: "'Pretendard', -apple-system, sans-serif" }}
+      >
         {children}
       </body>
     </html>

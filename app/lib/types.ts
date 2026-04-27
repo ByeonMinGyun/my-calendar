@@ -12,6 +12,7 @@ export interface Event {
   start_at: string
   end_at: string
   color: string
+  is_multi_day?: boolean
   category_id: string | null
   created_at: string
 }
