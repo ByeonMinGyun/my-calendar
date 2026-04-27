@@ -2,24 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { Event } from '../lib/types'
 import EventModal from './EventModal'
-
-interface Event {
-  id: string
-  title: string
-  start_at: string
-  end_at: string
-  color: string
-}
 
 interface Props {
   currentDate: Date
   setCurrentDate: (date: Date) => void
+  selectedCategories: string[]
 }
 
-export default function WeekView({ currentDate, setCurrentDate }: Props) {
+export default function WeekView({ currentDate, setCurrentDate, selectedCategories }: Props) {
   const [events, setEvents] = useState<Event[]>([])
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
 
   const getWeekDays = (date: Date) => {
     const day = date.getDay()
@@ -38,17 +33,23 @@ export default function WeekView({ currentDate, setCurrentDate }: Props) {
   const fetchEvents = async () => {
     const start = weekDays[0].toISOString()
     const end = weekDays[6].toISOString()
-    const { data } = await supabase
+    let query = supabase
       .from('events')
       .select('*')
       .gte('start_at', start)
       .lte('start_at', end)
+
+    if (selectedCategories.length > 0) {
+      query = query.in('category_id', selectedCategories)
+    }
+
+    const { data } = await query
     if (data) setEvents(data)
   }
 
   useEffect(() => {
     fetchEvents()
-  }, [currentDate])
+  }, [currentDate, selectedCategories])
 
   const getEventsForDay = (date: Date) =>
     events.filter((e) => {
@@ -68,18 +69,18 @@ export default function WeekView({ currentDate, setCurrentDate }: Props) {
   const dayNames = ['일', '월', '화', '수', '목', '금', '토']
 
   return (
-    <div>
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       {/* 이전/다음 주 이동 */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
         <button
           onClick={() => {
             const d = new Date(currentDate)
             d.setDate(d.getDate() - 7)
             setCurrentDate(d)
           }}
-          className="p-2 hover:bg-gray-100 rounded-lg text-gray-500"
+          className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"
         >
-          ←
+          ‹
         </button>
         <span className="text-sm font-medium text-gray-700">
           {weekDays[0].getMonth() + 1}월 {weekDays[0].getDate()}일 —{' '}
@@ -91,32 +92,43 @@ export default function WeekView({ currentDate, setCurrentDate }: Props) {
             d.setDate(d.getDate() + 7)
             setCurrentDate(d)
           }}
-          className="p-2 hover:bg-gray-100 rounded-lg text-gray-500"
+          className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"
         >
-          →
+          ›
         </button>
       </div>
 
       {/* 주간 그리드 */}
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 divide-x divide-gray-50">
         {weekDays.map((date, i) => (
-          <div key={i} className="flex flex-col items-center">
-            <div className="text-xs text-gray-400 mb-1">{dayNames[i]}</div>
-            <div
-              onClick={() => setSelectedDate(date)}
-              className={`w-8 h-8 flex items-center justify-center rounded-full text-sm cursor-pointer mb-2 ${
-                isToday(date)
-                  ? 'bg-gray-900 text-white font-medium'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              {date.getDate()}
+          <div key={i} className="flex flex-col">
+            <div className="flex flex-col items-center py-3 border-b border-gray-100">
+              <div className={`text-xs mb-1 font-medium ${
+                i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-400'
+              }`}>
+                {dayNames[i]}
+              </div>
+              <div
+                onClick={() => setSelectedDate(date)}
+                className={`w-8 h-8 flex items-center justify-center rounded-full text-sm cursor-pointer transition-colors ${
+                  isToday(date)
+                    ? 'bg-blue-500 text-white font-medium'
+                    : i === 0
+                    ? 'text-red-400 hover:bg-red-50'
+                    : i === 6
+                    ? 'text-blue-400 hover:bg-blue-50'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                {date.getDate()}
+              </div>
             </div>
-            <div className="w-full flex flex-col gap-1">
+            <div className="flex flex-col gap-1 p-1 min-h-32">
               {getEventsForDay(date).map((e) => (
                 <div
                   key={e.id}
-                  className="text-xs px-1 py-0.5 rounded truncate text-white cursor-pointer"
+                  onClick={() => setSelectedEvent(e)}
+                  className="text-xs px-1.5 py-1 rounded truncate text-white cursor-pointer hover:opacity-80 transition-opacity"
                   style={{ backgroundColor: e.color }}
                 >
                   {e.title}
@@ -127,10 +139,18 @@ export default function WeekView({ currentDate, setCurrentDate }: Props) {
         ))}
       </div>
 
-      {selectedDate && (
+      {selectedDate && !selectedEvent && (
         <EventModal
           selectedDate={selectedDate}
           onClose={() => setSelectedDate(null)}
+          onSaved={fetchEvents}
+        />
+      )}
+      {selectedEvent && (
+        <EventModal
+          selectedDate={new Date(selectedEvent.start_at)}
+          existingEvent={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
           onSaved={fetchEvents}
         />
       )}

@@ -1,16 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-
-interface Event {
-  id: string
-  title: string
-  description: string
-  start_at: string
-  end_at: string
-  color: string
-}
+import { Event, Category } from '../lib/types'
 
 interface Props {
   selectedDate: Date
@@ -29,32 +21,39 @@ export default function EventModal({ selectedDate, onClose, onSaved, existingEve
     existingEvent ? new Date(existingEvent.end_at).toTimeString().slice(0, 5) : '10:00'
   )
   const [color, setColor] = useState(existingEvent?.color || '#3b82f6')
+  const [categoryId, setCategoryId] = useState(existingEvent?.category_id || '')
+  const [categories, setCategories] = useState<Category[]>([])
 
   const colors = [
     '#3b82f6', '#ef4444', '#10b981',
     '#f59e0b', '#8b5cf6', '#ec4899',
   ]
 
+  useEffect(() => {
+    fetchCategories()
+  }, [])
+
+  const fetchCategories = async () => {
+    const { data } = await supabase.from('categories').select('*').order('created_at')
+    if (data) setCategories(data)
+  }
+
   const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
 
   const handleSave = async () => {
     if (!title.trim()) return
+    const payload = {
+      title: title.trim(),
+      description: description.trim(),
+      start_at: `${dateStr}T${startTime}:00`,
+      end_at: `${dateStr}T${endTime}:00`,
+      color,
+      category_id: categoryId || null,
+    }
     if (existingEvent) {
-      await supabase.from('events').update({
-        title: title.trim(),
-        description: description.trim(),
-        start_at: `${dateStr}T${startTime}:00`,
-        end_at: `${dateStr}T${endTime}:00`,
-        color,
-      }).eq('id', existingEvent.id)
+      await supabase.from('events').update(payload).eq('id', existingEvent.id)
     } else {
-      await supabase.from('events').insert({
-        title: title.trim(),
-        description: description.trim(),
-        start_at: `${dateStr}T${startTime}:00`,
-        end_at: `${dateStr}T${endTime}:00`,
-        color,
-      })
+      await supabase.from('events').insert(payload)
     }
     onSaved()
     onClose()
@@ -92,14 +91,14 @@ export default function EventModal({ selectedDate, onClose, onSaved, existingEve
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             autoFocus
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-gray-400 transition-colors"
+            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-300 transition-colors"
           />
           <input
             type="text"
             placeholder="메모 (선택)"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-gray-400 transition-colors"
+            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-300 transition-colors"
           />
           <div className="flex gap-2">
             <div className="flex-1">
@@ -108,7 +107,7 @@ export default function EventModal({ selectedDate, onClose, onSaved, existingEve
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-gray-400"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-300"
               />
             </div>
             <div className="flex-1">
@@ -117,10 +116,22 @@ export default function EventModal({ selectedDate, onClose, onSaved, existingEve
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-gray-400"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-300"
               />
             </div>
           </div>
+
+          {/* 카테고리 선택 */}
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-300 transition-colors text-gray-500"
+          >
+            <option value="">카테고리 선택 (선택)</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
 
           {/* 색상 선택 */}
           <div className="flex gap-2 pt-1">
@@ -140,7 +151,7 @@ export default function EventModal({ selectedDate, onClose, onSaved, existingEve
 
           <button
             onClick={handleSave}
-            className="w-full py-2.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors mt-1"
+            className="w-full py-2.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors mt-1"
           >
             {existingEvent ? '수정 완료' : '저장'}
           </button>

@@ -2,23 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { Event } from '../lib/types'
 import EventModal from './EventModal'
-
-interface Event {
-  id: string
-  title: string
-  description: string
-  start_at: string
-  end_at: string
-  color: string
-}
 
 interface Props {
   currentDate: Date
   setCurrentDate: (date: Date) => void
+  selectedCategories: string[]
 }
 
-export default function MonthView({ currentDate, setCurrentDate }: Props) {
+export default function MonthView({ currentDate, setCurrentDate, selectedCategories }: Props) {
   const [events, setEvents] = useState<Event[]>([])
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
@@ -33,98 +26,98 @@ export default function MonthView({ currentDate, setCurrentDate }: Props) {
 
   const fetchEvents = async () => {
     const start = new Date(year, month, 1).toISOString()
-    const end = new Date(year, month + 1, 0).toISOString()
-    const { data } = await supabase
+    const end = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
+    let query = supabase
       .from('events')
       .select('*')
       .gte('start_at', start)
       .lte('start_at', end)
+
+    if (selectedCategories.length > 0) {
+      query = query.in('category_id', selectedCategories)
+    }
+
+    const { data } = await query
     if (data) setEvents(data)
   }
 
   useEffect(() => {
     fetchEvents()
-  }, [year, month])
+  }, [year, month, selectedCategories])
 
-  const getEventsForDay = (day: number) => {
-    return events.filter((e) => {
+  const getEventsForDay = (day: number) =>
+    events.filter((e) => {
       const d = new Date(e.start_at)
       return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day
     })
-  }
 
   const today = new Date()
   const isToday = (day: number) =>
     today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
 
   return (
-    <div>
-      {/* 이전/다음 월 이동 */}
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-          className="p-2 hover:bg-gray-100 rounded-lg text-gray-500"
-        >
-          ←
-        </button>
-        <span className="text-sm font-medium text-gray-700">
-          {year}년 {month + 1}월
-        </span>
-        <button
-          onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-          className="p-2 hover:bg-gray-100 rounded-lg text-gray-500"
-        >
-          →
-        </button>
-      </div>
-
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       {/* 요일 헤더 */}
-      <div className="grid grid-cols-7 mb-2">
-        {['일', '월', '화', '수', '목', '금', '토'].map((d) => (
-          <div key={d} className="text-center text-xs text-gray-400 py-2">
+      <div className="grid grid-cols-7 border-b border-gray-100">
+        {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
+          <div
+            key={d}
+            className={`text-center text-xs py-3 font-medium ${
+              i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-400'
+            }`}
+          >
             {d}
           </div>
         ))}
       </div>
 
       {/* 날짜 그리드 */}
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7">
         {blanks.map((i) => (
-          <div key={`blank-${i}`} />
+          <div key={`blank-${i}`} className="border-b border-r border-gray-50 min-h-24" />
         ))}
-        {days.map((day) => (
-          <div
-            key={day}
-            onClick={() => setSelectedDate(new Date(year, month, day))}
-            className="min-h-16 p-1 rounded-lg hover:bg-gray-50 cursor-pointer"
-          >
+        {days.map((day, idx) => {
+          const dayEvents = getEventsForDay(day)
+          const col = (firstDay + idx) % 7
+          return (
             <div
-              className={`text-xs w-6 h-6 flex items-center justify-center rounded-full mb-1 ${
-                isToday(day)
-                  ? 'bg-gray-900 text-white font-medium'
-                  : 'text-gray-700'
+              key={day}
+              onClick={() => setSelectedDate(new Date(year, month, day))}
+              className={`min-h-24 p-1.5 border-b border-r border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${
+                col === 0 ? 'bg-red-50/30' : col === 6 ? 'bg-blue-50/30' : ''
               }`}
             >
-              {day}
-            </div>
-            {getEventsForDay(day).map((e) => (
               <div
-                key={e.id}
-                onClick={(evt) => {
-                  evt.stopPropagation()
-                  setSelectedEvent(e)
-                }}
-                className="text-xs px-1 py-0.5 rounded mb-0.5 truncate text-white cursor-pointer hover:opacity-80"
-                style={{ backgroundColor: e.color }}
+                className={`text-xs w-6 h-6 flex items-center justify-center rounded-full mb-1 font-medium ${
+                  isToday(day)
+                    ? 'bg-blue-500 text-white'
+                    : col === 0
+                    ? 'text-red-400'
+                    : col === 6
+                    ? 'text-blue-400'
+                    : 'text-gray-700'
+                }`}
               >
-                {e.title}
+                {day}
               </div>
-            ))}
-          </div>
-        ))}
+              {dayEvents.slice(0, 3).map((e) => (
+                <div
+                  key={e.id}
+                  onClick={(evt) => { evt.stopPropagation(); setSelectedEvent(e) }}
+                  className="text-xs px-1.5 py-0.5 rounded mb-0.5 truncate text-white cursor-pointer hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: e.color }}
+                >
+                  {e.title}
+                </div>
+              ))}
+              {dayEvents.length > 3 && (
+                <div className="text-xs text-gray-400 px-1">+{dayEvents.length - 3}개</div>
+              )}
+            </div>
+          )
+        })}
       </div>
 
-      {/* 날짜 클릭 → 새 일정 추가 */}
       {selectedDate && !selectedEvent && (
         <EventModal
           selectedDate={selectedDate}
@@ -132,8 +125,6 @@ export default function MonthView({ currentDate, setCurrentDate }: Props) {
           onSaved={fetchEvents}
         />
       )}
-
-      {/* 일정 클릭 → 수정/삭제 */}
       {selectedEvent && (
         <EventModal
           selectedDate={new Date(selectedEvent.start_at)}
