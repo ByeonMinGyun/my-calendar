@@ -255,7 +255,7 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
               className={`border-b border-r border-gray-50 cursor-pointer transition-colors overflow-hidden ${
                 inRange ? 'bg-blue-50' : isDragOver ? 'bg-blue-50' : 'hover:bg-gray-50'
               }`}
-              style={{ minHeight: 'calc((100vh - 120px) / 6)' }}
+              style={{ minHeight: 'calc((100vh - 100px) / 6)', minWidth: 0 }}
             >
               {/* 날짜 숫자 */}
               <div className="p-0.5 md:p-1">
@@ -332,7 +332,16 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
                     className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                     style={{ backgroundColor: e.color }}
                   />
-                  <span className="text-xs md:text-base text-gray-700 truncate">
+                  <span
+                    className="text-xs md:text-base text-gray-700"
+                    style={{
+                      overflow: 'hidden',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 1,
+                      WebkitBoxOrient: 'vertical',
+                      wordBreak: 'break-all',
+                    }}
+                  >
                     {e.title}
                   </span>
                 </div>
@@ -364,9 +373,16 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
                   </div>
                   <span
                     onClick={(evt) => { evt.stopPropagation(); setSelectedTodo(t) }}
-                    className={`text-xs md:text-base truncate cursor-pointer ${
+                    className={`text-xs md:text-base cursor-pointer ${
                       t.is_done ? 'line-through text-gray-300' : 'text-gray-700'
                     }`}
+                    style={{
+                      overflow: 'hidden',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 1,
+                      WebkitBoxOrient: 'vertical',
+                      wordBreak: 'break-all',
+                    }}
                   >
                     {t.title}
                   </span>
