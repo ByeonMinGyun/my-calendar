@@ -20,8 +20,10 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
   const [showFAB, setShowFAB] = useState(false)
   const [draggingIndex, setDraggingIndex] = useState<{ type: 'event' | 'todo', index: number } | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<{ type: 'event' | 'todo', index: number } | null>(null)
+  const [longPressIndex, setLongPressIndex] = useState<{ type: 'event' | 'todo', index: number } | null>(null)
   const touchStartY = useRef<number | null>(null)
   const touchItem = useRef<{ type: 'event' | 'todo', index: number } | null>(null)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
@@ -66,7 +68,6 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
     fetchTodos()
   }
 
-  // 데스크톱 드래그
   const handleDragStart = (type: 'event' | 'todo', index: number) => {
     setDraggingIndex({ type, index })
   }
@@ -91,15 +92,21 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
     setDragOverIndex(null)
   }
 
-  // iOS 터치 드래그
   const handleTouchStart = (type: 'event' | 'todo', index: number, e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY
-    touchItem.current = { type, index }
+    longPressTimer.current = setTimeout(() => {
+      touchItem.current = { type, index }
+      setLongPressIndex({ type, index })
+    }, 400)
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    e.preventDefault()
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
     if (!touchItem.current) return
+    e.preventDefault()
     const touchY = e.touches[0].clientY
     const elements = document.querySelectorAll(`[data-type="${touchItem.current.type}"]`)
     elements.forEach((el, i) => {
@@ -111,10 +118,15 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
   }
 
   const handleTouchEnd = async () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
     if (!touchItem.current || !dragOverIndex) {
       touchItem.current = null
       touchStartY.current = null
       setDragOverIndex(null)
+      setLongPressIndex(null)
       return
     }
     if (touchItem.current.index !== dragOverIndex.index) {
@@ -123,6 +135,7 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
     touchItem.current = null
     touchStartY.current = null
     setDragOverIndex(null)
+    setLongPressIndex(null)
   }
 
   const reorder = async (type: 'event' | 'todo', fromIndex: number, toIndex: number) => {
@@ -227,13 +240,16 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
                   onTouchStart={(evt) => handleTouchStart('event', i, evt)}
                   onTouchMove={handleTouchMove}
                   onTouchEnd={handleTouchEnd}
-                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-colors mb-1.5 cursor-grab active:cursor-grabbing ${
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all mb-1.5 cursor-grab active:cursor-grabbing select-none ${
                     draggingIndex?.type === 'event' && draggingIndex.index === i
                       ? 'opacity-40'
+                      : longPressIndex?.type === 'event' && longPressIndex.index === i
+                      ? 'border-2 border-blue-400 bg-blue-50'
                       : dragOverIndex?.type === 'event' && dragOverIndex.index === i
                       ? 'bg-blue-50 border border-blue-200'
-                      : 'hover:bg-gray-50'
+                      : 'hover:bg-gray-50 border border-transparent'
                   }`}
+                  style={{ WebkitUserSelect: 'none', userSelect: 'none' }}
                 >
                   <div className="text-gray-300 flex-shrink-0">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -273,13 +289,16 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
                   onTouchStart={(evt) => handleTouchStart('todo', i, evt)}
                   onTouchMove={handleTouchMove}
                   onTouchEnd={handleTouchEnd}
-                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-colors mb-1.5 cursor-grab active:cursor-grabbing ${
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all mb-1.5 cursor-grab active:cursor-grabbing select-none ${
                     draggingIndex?.type === 'todo' && draggingIndex.index === i
                       ? 'opacity-40'
+                      : longPressIndex?.type === 'todo' && longPressIndex.index === i
+                      ? 'border-2 border-blue-400 bg-blue-50'
                       : dragOverIndex?.type === 'todo' && dragOverIndex.index === i
                       ? 'bg-blue-50 border border-blue-200'
-                      : 'hover:bg-gray-50'
+                      : 'hover:bg-gray-50 border border-transparent'
                   }`}
+                  style={{ WebkitUserSelect: 'none', userSelect: 'none' }}
                 >
                   <div className="text-gray-300 flex-shrink-0">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -145,13 +145,15 @@ export default function Home() {
             )}
           </div>
 
-          {/* FAB 버튼 */}
-          <button
-            onClick={() => setShowFAB(true)}
-            className="fixed bottom-20 md:bottom-16 right-6 md:right-16 w-12 h-12 md:w-14 md:h-14 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all hover:scale-105 flex items-center justify-center text-2xl z-40"
-          >
-            +
-          </button>
+          {/* FAB 버튼 — 캘린더 뷰가 아닐 때만 표시 */}
+          {currentView !== 'month' && (
+            <button
+              onClick={() => setShowFAB(true)}
+              className="fixed bottom-20 md:bottom-16 right-6 md:right-16 w-12 h-12 md:w-14 md:h-14 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all hover:scale-105 flex items-center justify-center text-2xl z-40"
+            >
+              +
+            </button>
+          )}
         </main>
       </div>
 

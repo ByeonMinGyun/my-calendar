@@ -7,6 +7,7 @@ import DayDetailModal from './DayDetailModal'
 import EventDetailModal from './EventDetailModal'
 import MultiDayEventModal from './MultiDayEventModal'
 import FABModal from './FABModal'
+import DayView from './DayView'
 
 interface Props {
   currentDate: Date
@@ -28,7 +29,9 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
   const [showMultiDayModal, setShowMultiDayModal] = useState(false)
   const [multiDayStart, setMultiDayStart] = useState<Date | null>(null)
   const [multiDayEnd, setMultiDayEnd] = useState<Date | null>(null)
+  const [showDayView, setShowDayView] = useState(false)
   const isDraggingRange = useRef(false)
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -195,7 +198,12 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
       setMultiDayEnd(new Date(year, month, end))
       setShowMultiDayModal(true)
     } else {
-      setSelectedDate(new Date(year, month, day))
+      const clickedDate = new Date(year, month, day)
+      setSelectedDate(clickedDate)
+      if (isMobile) {
+        setCurrentDate(clickedDate)
+        setShowDayView(true)
+      }
     }
     setRangeDragStart(null)
     setRangeDragEnd(null)
@@ -251,7 +259,6 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
               onMouseUp={(e) => handleMouseUp(e, day)}
               onDragOver={(e) => handleDragOver(e, day)}
               onDrop={(e) => handleDrop(e, day)}
-              onClick={() => setSelectedDate(new Date(year, month, day))}
               className={`border-b border-r border-gray-50 cursor-pointer transition-colors overflow-hidden ${
                 inRange ? 'bg-blue-50' : isDragOver ? 'bg-blue-50' : 'hover:bg-gray-50'
               }`}
@@ -315,7 +322,7 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
                 )
               })}
 
-              {/* 단일 일정 */}
+              {/* 단일 일정 — 모바일: 점 없이 텍스트만, 데스크톱: 점 + 텍스트 */}
               {singleEvents.slice(0, maxShow).map((e) => (
                 <div
                   key={e.id}
@@ -329,12 +336,13 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
                   }`}
                 >
                   <div
-                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    className="hidden md:block w-2.5 h-2.5 rounded-full flex-shrink-0"
                     style={{ backgroundColor: e.color }}
                   />
                   <span
-                    className="text-xs md:text-base text-gray-700"
+                    className="text-xs md:text-base font-medium md:font-normal md:text-gray-700"
                     style={{
+                      color: e.color,
                       overflow: 'hidden',
                       display: '-webkit-box',
                       WebkitLineClamp: 1,
@@ -393,12 +401,38 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
         })}
       </div>
 
-      {selectedDate && !selectedEvent && !selectedTodo && (
+      {/* 데스크톱: 날짜 클릭 → DayDetailModal */}
+      {!isMobile && selectedDate && !selectedEvent && !selectedTodo && (
         <DayDetailModal
           date={selectedDate}
           onClose={() => setSelectedDate(null)}
           onSaved={fetchAll}
         />
+      )}
+
+      {/* 모바일: 날짜 클릭 → DayView */}
+      {isMobile && showDayView && selectedDate && (
+        <div className="fixed inset-0 bg-white z-50 flex flex-col">
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+            <button
+              onClick={() => { setShowDayView(false); setSelectedDate(null) }}
+              className="text-blue-500 text-sm"
+            >
+              ← 뒤로
+            </button>
+            <span className="font-semibold text-gray-900">
+              {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일
+            </span>
+          </div>
+          <div className="flex-1 overflow-auto">
+            <DayView
+              currentDate={selectedDate}
+              setCurrentDate={(d) => { setCurrentDate(d); setSelectedDate(d) }}
+              selectedCategories={selectedCategories}
+              onEventClick={(e) => setSelectedEvent(e)}
+            />
+          </div>
+        </div>
       )}
 
       {selectedEvent && (
