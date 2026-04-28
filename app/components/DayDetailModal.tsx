@@ -18,8 +18,10 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
   const [showFAB, setShowFAB] = useState(false)
-  const dragItem = useRef<{ type: 'event' | 'todo', id: string, index: number } | null>(null)
-  const dragOverItem = useRef<{ type: 'event' | 'todo', index: number } | null>(null)
+  const [draggingIndex, setDraggingIndex] = useState<{ type: 'event' | 'todo', index: number } | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<{ type: 'event' | 'todo', index: number } | null>(null)
+  const touchStartY = useRef<number | null>(null)
+  const touchItem = useRef<{ type: 'event' | 'todo', index: number } | null>(null)
 
   const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
@@ -64,26 +66,70 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
     fetchTodos()
   }
 
-  // 드래그 핸들러
-  const handleDragStart = (type: 'event' | 'todo', id: string, index: number) => {
-    dragItem.current = { type, id, index }
+  // 데스크톱 드래그
+  const handleDragStart = (type: 'event' | 'todo', index: number) => {
+    setDraggingIndex({ type, index })
   }
 
   const handleDragEnter = (type: 'event' | 'todo', index: number) => {
-    dragOverItem.current = { type, index }
+    setDragOverIndex({ type, index })
   }
 
   const handleDragEnd = async () => {
-    if (!dragItem.current || !dragOverItem.current) return
-    if (dragItem.current.type !== dragOverItem.current.type) return
-    if (dragItem.current.index === dragOverItem.current.index) return
+    if (!draggingIndex || !dragOverIndex) {
+      setDraggingIndex(null)
+      setDragOverIndex(null)
+      return
+    }
+    if (draggingIndex.type !== dragOverIndex.type || draggingIndex.index === dragOverIndex.index) {
+      setDraggingIndex(null)
+      setDragOverIndex(null)
+      return
+    }
+    await reorder(draggingIndex.type, draggingIndex.index, dragOverIndex.index)
+    setDraggingIndex(null)
+    setDragOverIndex(null)
+  }
 
-    const type = dragItem.current.type
+  // iOS 터치 드래그
+  const handleTouchStart = (type: 'event' | 'todo', index: number, e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY
+    touchItem.current = { type, index }
+  }
 
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault()
+    if (!touchItem.current) return
+    const touchY = e.touches[0].clientY
+    const elements = document.querySelectorAll(`[data-type="${touchItem.current.type}"]`)
+    elements.forEach((el, i) => {
+      const rect = el.getBoundingClientRect()
+      if (touchY >= rect.top && touchY <= rect.bottom) {
+        setDragOverIndex({ type: touchItem.current!.type, index: i })
+      }
+    })
+  }
+
+  const handleTouchEnd = async () => {
+    if (!touchItem.current || !dragOverIndex) {
+      touchItem.current = null
+      touchStartY.current = null
+      setDragOverIndex(null)
+      return
+    }
+    if (touchItem.current.index !== dragOverIndex.index) {
+      await reorder(touchItem.current.type, touchItem.current.index, dragOverIndex.index)
+    }
+    touchItem.current = null
+    touchStartY.current = null
+    setDragOverIndex(null)
+  }
+
+  const reorder = async (type: 'event' | 'todo', fromIndex: number, toIndex: number) => {
     if (type === 'event') {
       const newEvents = [...events]
-      const draggedItem = newEvents.splice(dragItem.current.index, 1)[0]
-      newEvents.splice(dragOverItem.current.index, 0, draggedItem)
+      const draggedItem = newEvents.splice(fromIndex, 1)[0]
+      newEvents.splice(toIndex, 0, draggedItem)
       setEvents(newEvents)
       await Promise.all(
         newEvents.map((e, i) =>
@@ -92,8 +138,8 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
       )
     } else {
       const newTodos = [...todos]
-      const draggedItem = newTodos.splice(dragItem.current.index, 1)[0]
-      newTodos.splice(dragOverItem.current.index, 0, draggedItem)
+      const draggedItem = newTodos.splice(fromIndex, 1)[0]
+      newTodos.splice(toIndex, 0, draggedItem)
       setTodos(newTodos)
       await Promise.all(
         newTodos.map((t, i) =>
@@ -101,9 +147,6 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
         )
       )
     }
-
-    dragItem.current = null
-    dragOverItem.current = null
   }
 
   const dayNames = ['일', '월', '화', '수', '목', '금', '토']
@@ -169,16 +212,28 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
           {/* 일정 목록 */}
           {events.length > 0 && (
             <div className="mb-5">
-              <p className="text-sm font-medium text-gray-400 mb-3">일정 <span className="text-xs text-gray-300 ml-1">드래그로 순서 변경</span></p>
+              <p className="text-sm font-medium text-gray-400 mb-3">
+                일정 <span className="text-xs text-gray-300 ml-1">길게 눌러서 순서 변경</span>
+              </p>
               {events.map((e, i) => (
                 <div
                   key={e.id}
+                  data-type="event"
                   draggable
-                  onDragStart={() => handleDragStart('event', e.id, i)}
+                  onDragStart={() => handleDragStart('event', i)}
                   onDragEnter={() => handleDragEnter('event', i)}
                   onDragEnd={handleDragEnd}
                   onDragOver={(evt) => evt.preventDefault()}
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 transition-colors mb-1.5 cursor-grab active:cursor-grabbing active:opacity-50 active:bg-blue-50"
+                  onTouchStart={(evt) => handleTouchStart('event', i, evt)}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-colors mb-1.5 cursor-grab active:cursor-grabbing ${
+                    draggingIndex?.type === 'event' && draggingIndex.index === i
+                      ? 'opacity-40'
+                      : dragOverIndex?.type === 'event' && dragOverIndex.index === i
+                      ? 'bg-blue-50 border border-blue-200'
+                      : 'hover:bg-gray-50'
+                  }`}
                 >
                   <div className="text-gray-300 flex-shrink-0">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -203,16 +258,28 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
           {/* 할일 목록 */}
           {todos.length > 0 && (
             <div>
-              <p className="text-sm font-medium text-gray-400 mb-3">할 일 <span className="text-xs text-gray-300 ml-1">드래그로 순서 변경</span></p>
+              <p className="text-sm font-medium text-gray-400 mb-3">
+                할 일 <span className="text-xs text-gray-300 ml-1">길게 눌러서 순서 변경</span>
+              </p>
               {todos.map((t, i) => (
                 <div
                   key={t.id}
+                  data-type="todo"
                   draggable
-                  onDragStart={() => handleDragStart('todo', t.id, i)}
+                  onDragStart={() => handleDragStart('todo', i)}
                   onDragEnter={() => handleDragEnter('todo', i)}
                   onDragEnd={handleDragEnd}
                   onDragOver={(evt) => evt.preventDefault()}
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 transition-colors mb-1.5 cursor-grab active:cursor-grabbing active:opacity-50 active:bg-blue-50"
+                  onTouchStart={(evt) => handleTouchStart('todo', i, evt)}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-colors mb-1.5 cursor-grab active:cursor-grabbing ${
+                    draggingIndex?.type === 'todo' && draggingIndex.index === i
+                      ? 'opacity-40'
+                      : dragOverIndex?.type === 'todo' && dragOverIndex.index === i
+                      ? 'bg-blue-50 border border-blue-200'
+                      : 'hover:bg-gray-50'
+                  }`}
                 >
                   <div className="text-gray-300 flex-shrink-0">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
