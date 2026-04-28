@@ -60,12 +60,10 @@ export default function EventDetailModal({ event, onClose, onSaved }: Props) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <span className="text-base text-gray-700">
-              {new Date(event.start_at).toLocaleDateString('ko-KR', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                weekday: 'short',
-              })}
+              {event.is_multi_day
+                ? `${new Date(event.start_at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })} — ${new Date(new Date(event.end_at).getTime() - 60000).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}`
+                : new Date(event.start_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })
+              }
             </span>
           </div>
 

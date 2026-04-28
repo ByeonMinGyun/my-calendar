@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { Event, Todo } from '../lib/types'
 import EventDetailModal from './EventDetailModal'
@@ -18,18 +18,27 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
   const [showFAB, setShowFAB] = useState(false)
+  const dragItem = useRef<{ type: 'event' | 'todo', id: string, index: number } | null>(null)
+  const dragOverItem = useRef<{ type: 'event' | 'todo', index: number } | null>(null)
 
   const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
   const fetchEvents = async () => {
-    const start = new Date(dateStr + 'T00:00:00').toISOString()
-    const end = new Date(dateStr + 'T23:59:59').toISOString()
-    const { data } = await supabase
-      .from('events')
-      .select('*')
-      .lte('start_at', end)
-      .gte('end_at', start)
-    if (data) setEvents(data)
+    const { data } = await supabase.from('events').select('*')
+    if (data) {
+      const filtered = data.filter((e) => {
+        const startDate = new Date(e.start_at)
+        const endDate = new Date(e.end_at)
+        const targetDate = new Date(dateStr)
+        const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
+        const endDay = e.is_multi_day
+          ? new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate())
+          : startDay
+        const target = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate())
+        return target >= startDay && target <= endDay
+      })
+      setEvents(filtered.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)))
+    }
   }
 
   const fetchTodos = async () => {
@@ -37,6 +46,7 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
       .from('todos')
       .select('*')
       .eq('due_date', dateStr)
+      .order('sort_order')
     if (data) setTodos(data)
   }
 
@@ -52,6 +62,48 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
   const toggleTodo = async (id: string, is_done: boolean) => {
     await supabase.from('todos').update({ is_done: !is_done }).eq('id', id)
     fetchTodos()
+  }
+
+  // 드래그 핸들러
+  const handleDragStart = (type: 'event' | 'todo', id: string, index: number) => {
+    dragItem.current = { type, id, index }
+  }
+
+  const handleDragEnter = (type: 'event' | 'todo', index: number) => {
+    dragOverItem.current = { type, index }
+  }
+
+  const handleDragEnd = async () => {
+    if (!dragItem.current || !dragOverItem.current) return
+    if (dragItem.current.type !== dragOverItem.current.type) return
+    if (dragItem.current.index === dragOverItem.current.index) return
+
+    const type = dragItem.current.type
+
+    if (type === 'event') {
+      const newEvents = [...events]
+      const draggedItem = newEvents.splice(dragItem.current.index, 1)[0]
+      newEvents.splice(dragOverItem.current.index, 0, draggedItem)
+      setEvents(newEvents)
+      await Promise.all(
+        newEvents.map((e, i) =>
+          supabase.from('events').update({ sort_order: i }).eq('id', e.id)
+        )
+      )
+    } else {
+      const newTodos = [...todos]
+      const draggedItem = newTodos.splice(dragItem.current.index, 1)[0]
+      newTodos.splice(dragOverItem.current.index, 0, draggedItem)
+      setTodos(newTodos)
+      await Promise.all(
+        newTodos.map((t, i) =>
+          supabase.from('todos').update({ sort_order: i }).eq('id', t.id)
+        )
+      )
+    }
+
+    dragItem.current = null
+    dragOverItem.current = null
   }
 
   const dayNames = ['일', '월', '화', '수', '목', '금', '토']
@@ -81,7 +133,7 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
     return (
       <FABModal
         selectedDate={date}
-        initialDate={`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`}
+        initialDate={dateStr}
         onClose={() => setShowFAB(false)}
         onSaved={() => { fetchAll(); onSaved() }}
       />
@@ -117,18 +169,32 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
           {/* 일정 목록 */}
           {events.length > 0 && (
             <div className="mb-5">
-              <p className="text-sm font-medium text-gray-400 mb-3">일정</p>
-              {events.map((e) => (
+              <p className="text-sm font-medium text-gray-400 mb-3">일정 <span className="text-xs text-gray-300 ml-1">드래그로 순서 변경</span></p>
+              {events.map((e, i) => (
                 <div
                   key={e.id}
-                  onClick={() => setSelectedEvent(e)}
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors mb-1.5"
+                  draggable
+                  onDragStart={() => handleDragStart('event', e.id, i)}
+                  onDragEnter={() => handleDragEnter('event', i)}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={(evt) => evt.preventDefault()}
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 transition-colors mb-1.5 cursor-grab active:cursor-grabbing active:opacity-50 active:bg-blue-50"
                 >
+                  <div className="text-gray-300 flex-shrink-0">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                    </svg>
+                  </div>
                   <div
                     className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                     style={{ backgroundColor: e.color }}
                   />
-                  <span className="text-base text-gray-800 font-medium">{e.title}</span>
+                  <span
+                    className="text-base text-gray-800 font-medium flex-1"
+                    onClick={() => setSelectedEvent(e)}
+                  >
+                    {e.title}
+                  </span>
                 </div>
               ))}
             </div>
@@ -137,12 +203,22 @@ export default function DayDetailModal({ date, onClose, onSaved }: Props) {
           {/* 할일 목록 */}
           {todos.length > 0 && (
             <div>
-              <p className="text-sm font-medium text-gray-400 mb-3">할 일</p>
-              {todos.map((t) => (
+              <p className="text-sm font-medium text-gray-400 mb-3">할 일 <span className="text-xs text-gray-300 ml-1">드래그로 순서 변경</span></p>
+              {todos.map((t, i) => (
                 <div
                   key={t.id}
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 transition-colors mb-1.5"
+                  draggable
+                  onDragStart={() => handleDragStart('todo', t.id, i)}
+                  onDragEnter={() => handleDragEnter('todo', i)}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={(evt) => evt.preventDefault()}
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 transition-colors mb-1.5 cursor-grab active:cursor-grabbing active:opacity-50 active:bg-blue-50"
                 >
+                  <div className="text-gray-300 flex-shrink-0">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                    </svg>
+                  </div>
                   <div
                     onClick={() => toggleTodo(t.id, t.is_done)}
                     className={`w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center cursor-pointer transition-colors ${

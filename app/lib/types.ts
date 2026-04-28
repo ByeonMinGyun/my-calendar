@@ -14,6 +14,7 @@ export interface Event {
   color: string
   is_multi_day?: boolean
   category_id: string | null
+  sort_order?: number
   created_at: string
 }
 
@@ -23,5 +24,6 @@ export interface Todo {
   is_done: boolean
   due_date: string | null
   category_id: string | null
+  sort_order?: number
   created_at: string
 }

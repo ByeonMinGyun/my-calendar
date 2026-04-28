@@ -39,13 +39,13 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
   const blanks = Array.from({ length: firstDay }, (_, i) => i)
 
   const fetchEvents = async () => {
-    const start = new Date(year, month, 1).toISOString()
-    const end = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
+    const startStr = `${year}-${String(month + 1).padStart(2, '0')}-01`
+    const endStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(new Date(year, month + 1, 0).getDate()).padStart(2, '0')}`
     let query = supabase
       .from('events')
       .select('*')
-      .gte('start_at', start)
-      .lte('end_at', end)
+      .lte('start_at', endStr + 'T23:59:59')
+      .gte('end_at', startStr)
 
     if (selectedCategories.length > 0) {
       query = query.in('category_id', selectedCategories)
@@ -84,7 +84,7 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
   const getSingleEventsForDay = (day: number) =>
     events.filter((e) => {
       if (e.is_multi_day) return false
-      const d = new Date(e.start_at)
+      const d = new Date(e.start_at.replace(' ', 'T'))
       return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day
     })
 
@@ -154,7 +154,7 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
     if (draggingEvent) {
       await supabase.from('events').update({
         start_at: `${dateStr}T00:00:00`,
-        end_at: `${dateStr}T23:59:00`,
+        end_at: `${dateStr}T00:00:00`,
       }).eq('id', draggingEvent.id)
       setDraggingEvent(null)
       fetchEvents()
@@ -214,13 +214,13 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
     today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
       {/* 요일 헤더 */}
       <div className="grid grid-cols-7 border-b border-gray-100">
         {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
           <div
             key={d}
-            className={`text-center text-xs md:text-sm py-2 md:py-3 font-medium ${
+            className={`text-center text-xs md:text-sm py-1.5 md:py-3 font-medium ${
               i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-600'
             }`}
           >
@@ -230,9 +230,9 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
       </div>
 
       {/* 날짜 그리드 */}
-      <div className="grid grid-cols-7 flex-1 select-none calendar-grid">
+      <div className="grid grid-cols-7 flex-1 select-none w-full" style={{ touchAction: 'pan-x' }}>
         {blanks.map((i) => (
-          <div key={`blank-${i}`} className="border-b border-r border-gray-50 min-h-16 md:min-h-28" />
+          <div key={`blank-${i}`} className="border-b border-r border-gray-50 overflow-hidden" />
         ))}
         {days.map((day, idx) => {
           const singleEvents = getSingleEventsForDay(day)
@@ -252,23 +252,26 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
               onDragOver={(e) => handleDragOver(e, day)}
               onDrop={(e) => handleDrop(e, day)}
               onClick={() => setSelectedDate(new Date(year, month, day))}
-              className={`min-h-16 md:min-h-28 p-1 md:p-1.5 border-b border-r border-gray-50 cursor-pointer transition-colors ${
+              className={`border-b border-r border-gray-50 cursor-pointer transition-colors overflow-hidden ${
                 inRange ? 'bg-blue-50' : isDragOver ? 'bg-blue-50' : 'hover:bg-gray-50'
               }`}
+              style={{ minHeight: 'calc((100vh - 120px) / 6)' }}
             >
               {/* 날짜 숫자 */}
-              <div
-                className={`text-xs md:text-sm w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full mb-0.5 font-medium ${
-                  isToday(day)
-                    ? 'bg-blue-500 text-white'
-                    : col === 0
-                    ? 'text-red-400'
-                    : col === 6
-                    ? 'text-blue-400'
-                    : 'text-gray-700'
-                }`}
-              >
-                {day}
+              <div className="p-0.5 md:p-1">
+                <div
+                  className={`text-xs md:text-sm w-5 h-5 md:w-7 md:h-7 flex items-center justify-center rounded-full font-medium mx-auto ${
+                    isToday(day)
+                      ? 'bg-blue-500 text-white'
+                      : col === 0
+                      ? 'text-red-400'
+                      : col === 6
+                      ? 'text-blue-400'
+                      : 'text-gray-700'
+                  }`}
+                >
+                  {day}
+                </div>
               </div>
 
               {/* 다일 일정 바 */}
@@ -277,16 +280,16 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
                 const isEnd = isMultiDayEnd(e, day) || isWeekEnd(day)
                 const borderStyle = `1.5px solid ${e.color}`
                 const borderRadius = isStart && isEnd
-                  ? '6px'
-                  : isStart ? '6px 0 0 6px'
-                  : isEnd ? '0 6px 6px 0'
+                  ? '4px'
+                  : isStart ? '4px 0 0 4px'
+                  : isEnd ? '0 4px 4px 0'
                   : '0'
                 return (
                   <div
                     key={e.id}
                     onMouseDown={(evt) => evt.stopPropagation()}
                     onClick={(evt) => { evt.stopPropagation(); setSelectedEvent(e) }}
-                    className="h-5 mb-0.5 flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+                    className="h-5 md:h-7 mb-0.5 flex items-center cursor-pointer hover:opacity-80 transition-opacity overflow-visible"
                     style={{
                       backgroundColor: '#ffffff',
                       borderTop: borderStyle,
@@ -294,18 +297,20 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
                       borderLeft: isStart ? borderStyle : 'none',
                       borderRight: isEnd ? borderStyle : 'none',
                       borderRadius,
-                      marginLeft: isStart ? '0px' : '-8px',
-                      marginRight: isEnd ? '0px' : '-8px',
+                      marginLeft: isStart ? '1px' : '-1px',
+                      marginRight: isEnd ? '1px' : '-1px',
                     }}
                   >
-                    {isStart && (
-                      <span
-                        className="text-xs font-medium truncate px-1"
-                        style={{ color: e.color }}
-                      >
-                        {e.title}
-                      </span>
-                    )}
+                    <span
+                      className="text-xs md:text-base font-medium px-1 whitespace-nowrap"
+                      style={{
+                        color: e.color,
+                        visibility: isStart ? 'visible' : 'hidden',
+                        overflow: 'visible',
+                      }}
+                    >
+                      {e.title}
+                    </span>
                   </div>
                 )
               })}
@@ -319,14 +324,15 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
                   onDragEnd={handleDragEnd}
                   onMouseDown={(evt) => evt.stopPropagation()}
                   onClick={(evt) => { evt.stopPropagation(); setSelectedEvent(e) }}
-                  className={`flex items-center gap-1 px-1 py-0.5 rounded cursor-pointer transition-colors mb-0.5 hover:bg-gray-100 ${
+                  className={`flex items-center gap-1 px-1 py-0.5 cursor-pointer transition-colors mb-0.5 hover:bg-gray-100 rounded ${
                     draggingEvent?.id === e.id ? 'opacity-40' : ''
                   }`}
                 >
-                 <span
-                    className="text-xs truncate font-medium"
-                    style={{ color: e.color }}
-                  >
+                  <div
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: e.color }}
+                  />
+                  <span className="text-xs md:text-base text-gray-700 truncate">
                     {e.title}
                   </span>
                 </div>
@@ -340,26 +346,26 @@ export default function MonthView({ currentDate, setCurrentDate, selectedCategor
                   onDragStart={(evt) => handleTodoDragStart(evt, t)}
                   onDragEnd={handleDragEnd}
                   onMouseDown={(evt) => evt.stopPropagation()}
-                  className={`flex items-center gap-1 px-1 py-0.5 rounded transition-colors mb-0.5 hover:bg-gray-100 ${
+                  className={`flex items-center gap-1.5 px-1 py-0.5 transition-colors mb-0.5 ${
                     draggingTodo?.id === t.id ? 'opacity-40' : ''
                   }`}
                 >
                   <div
                     onClick={(evt) => toggleTodo(evt, t.id, t.is_done)}
-                    className={`w-3 h-3 rounded border flex-shrink-0 flex items-center justify-center transition-colors cursor-pointer ${
-                      t.is_done ? 'bg-blue-500 border-blue-500' : 'border-gray-300 hover:border-blue-300'
+                    className={`w-2.5 h-2.5 rounded border flex-shrink-0 flex items-center justify-center transition-colors cursor-pointer ${
+                      t.is_done ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
                     }`}
                   >
                     {t.is_done && (
-                      <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <svg className="w-1.5 h-1.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     )}
                   </div>
                   <span
                     onClick={(evt) => { evt.stopPropagation(); setSelectedTodo(t) }}
-                    className={`text-xs md:text-sm truncate cursor-pointer ${
-                      t.is_done ? 'line-through text-gray-300' : 'text-gray-700 hover:text-blue-500'
+                    className={`text-xs md:text-base truncate cursor-pointer ${
+                      t.is_done ? 'line-through text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     {t.title}

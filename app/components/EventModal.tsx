@@ -45,7 +45,7 @@ export default function EventModal({ selectedDate, onClose, onSaved, existingEve
       title: title.trim(),
       description: description.trim(),
       start_at: `${eventDate}T00:00:00`,
-      end_at: `${eventDate}T23:59:00`,
+      end_at: `${eventDate}T00:00:00`,
       color: getCategoryColor(categoryId),
       category_id: categoryId || null,
     }

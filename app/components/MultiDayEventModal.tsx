@@ -42,8 +42,8 @@ export default function MultiDayEventModal({ startDate, endDate, onClose, onSave
     await supabase.from('events').insert({
       title: title.trim(),
       description: description.trim(),
-      start_at: `${toDateStr(startDate)}T00:00:00+09:00`,
-      end_at: `${toDateStr(endDate)}T23:59:00+09:00`,
+      start_at: `${toDateStr(startDate)}T12:00:00+09:00`,
+      end_at: `${toDateStr(endDate)}T12:00:00+09:00`,
       color: getCategoryColor(categoryId),
       category_id: categoryId || null,
       is_multi_day: true,

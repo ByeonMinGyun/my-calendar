@@ -49,7 +49,7 @@ export default function FABModal({ selectedDate, onClose, onSaved, existingTodo,
       title: eventTitle.trim(),
       description: eventDescription.trim(),
       start_at: `${eventDate}T00:00:00`,
-      end_at: `${eventDate}T23:59:00`,
+            end_at: `${eventDate}T00:00:00`,
       color: getCategoryColor(eventCategoryId),
       category_id: eventCategoryId || null,
     })
